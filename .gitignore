@@ -52,3 +52,5 @@ fix-blank-page.ps1
 
 # 临时传输目录
 backend-transfer/
+
+ai-docs/*

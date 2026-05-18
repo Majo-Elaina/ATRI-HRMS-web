@@ -11,16 +11,11 @@
  Target Server Version : 80045 (8.0.45)
  File Encoding         : 65001
 
- Date: 14/03/2026 01:19:47
+ Date: 18/05/2026 15:34:05
 */
 
 SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
-CREATE DATABASE IF NOT EXISTS hrms_db CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
-
-
--- 选择数据库
-USE hrms_db;
 
 -- ----------------------------
 -- Table structure for agent_approval_record
@@ -38,7 +33,7 @@ CREATE TABLE `agent_approval_record`  (
   INDEX `idx_agent_approval_user_id`(`approver_user_id` ASC) USING BTREE,
   CONSTRAINT `fk_agent_approval_task` FOREIGN KEY (`task_id`) REFERENCES `agent_task` (`task_id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
   CONSTRAINT `fk_agent_approval_user` FOREIGN KEY (`approver_user_id`) REFERENCES `sys_user` (`user_id`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 2 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of agent_approval_record
@@ -53,17 +48,22 @@ CREATE TABLE `agent_execution_log`  (
   `task_id` int NOT NULL,
   `step_no` int NOT NULL DEFAULT 0,
   `log_level` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
-  `message` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
+  `message` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL,
   `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`log_id`) USING BTREE,
   INDEX `idx_agent_execution_task_id`(`task_id` ASC) USING BTREE,
   INDEX `idx_agent_execution_step_no`(`step_no` ASC) USING BTREE,
   CONSTRAINT `fk_agent_execution_task` FOREIGN KEY (`task_id`) REFERENCES `agent_task` (`task_id`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 15 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of agent_execution_log
 -- ----------------------------
+INSERT INTO `agent_execution_log` VALUES (5, 3, 0, 'info', '计划已生成，来源：local-rule', '2026-05-18 13:55:11');
+INSERT INTO `agent_execution_log` VALUES (6, 3, 0, 'warn', '当前支持的操作：个人请假申请、个人考勤补录、角色权限调整。', '2026-05-18 13:55:11');
+INSERT INTO `agent_execution_log` VALUES (9, 5, 0, 'info', '计划已生成，来源：chat-provider:openai-compatible-primary', '2026-05-18 14:10:23');
+INSERT INTO `agent_execution_log` VALUES (10, 6, 0, 'info', '计划已生成，来源：local-rule-fallback', '2026-05-18 14:48:01');
+INSERT INTO `agent_execution_log` VALUES (11, 6, 0, 'info', '任务已被用户取消', '2026-05-18 15:00:25');
 
 -- ----------------------------
 -- Table structure for agent_task
@@ -88,11 +88,14 @@ CREATE TABLE `agent_task`  (
   INDEX `idx_agent_task_status`(`status` ASC) USING BTREE,
   INDEX `idx_agent_task_create_time`(`create_time` ASC) USING BTREE,
   CONSTRAINT `fk_agent_task_user` FOREIGN KEY (`user_id`) REFERENCES `sys_user` (`user_id`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 7 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of agent_task
 -- ----------------------------
+INSERT INTO `agent_task` VALUES (3, 9, '帮我提交 1 天事假申请，原因是个人事务', 'unknown', 'medium', 'planned', 'local-rule', 1, 0, '{\"intent\":\"unknown\",\"summary\":\"当前指令未匹配到可执行的白名单操作\",\"riskLevel\":\"medium\",\"requiresApproval\":true,\"executable\":false,\"warnings\":[\"当前支持的操作：个人请假申请、个人考勤补录、角色权限调整。\"],\"entities\":[],\"preview\":{},\"steps\":[{\"stepNo\":1,\"title\":\"仅生成计划\",\"method\":\"LOCAL\",\"api\":\"agentPlanner\",\"payloadPreview\":{}}],\"rollbackPlan\":[]}', NULL, '2026-05-18 13:55:11', '2026-05-18 13:55:11');
+INSERT INTO `agent_task` VALUES (5, 9, '帮我提交 2 天病假申请', 'leave.create', 'low', 'planned', 'chat-provider:openai-compatible-primary', 1, 1, '{\"intent\":\"leave.create\",\"summary\":\"为当前员工提交请假申请\",\"riskLevel\":\"low\",\"requiresApproval\":true,\"executable\":true,\"warnings\":[],\"entities\":[{\"type\":\"employee\",\"id\":16,\"name\":\"云月\"}],\"preview\":{\"leaveType\":\"病假\",\"startDate\":\"2023-10-01\",\"endDate\":\"2023-10-02\",\"days\":2,\"reason\":\"\"},\"steps\":[{\"stepNo\":1,\"title\":\"校验请假参数\",\"method\":\"LOCAL\",\"api\":\"agentValidator\",\"payloadPreview\":{\"leaveType\":\"病假\",\"startDate\":\"2023-10-01\",\"endDate\":\"2023-10-02\",\"days\":2,\"reason\":\"\"}},{\"stepNo\":2,\"title\":\"匹配审批链\",\"method\":\"LOCAL\",\"api\":\"approvalRuleRepository\",\"payloadPreview\":{\"identityTag\":\"ADMIN\",\"days\":2}},{\"stepNo\":3,\"title\":\"创建请假申请\",\"method\":\"POST\",\"api\":\"/api/leave-requests\",\"payloadPreview\":{\"leaveType\":\"病假\",\"startDate\":\"2023-10-01\",\"endDate\":\"2023-10-02\",\"days\":2,\"reason\":\"\"}}],\"rollbackPlan\":[\"如果提交有误，可在审批通过前撤销申请。\"]}', NULL, '2026-05-18 14:10:23', '2026-05-18 14:10:23');
+INSERT INTO `agent_task` VALUES (6, 9, '为财务专员增加薪资记录查看权限', 'role-permission.update', 'high', 'cancelled', 'local-rule-fallback', 1, 1, '{\"intent\":\"role-permission.update\",\"summary\":\"增加一个角色的一项权限\",\"riskLevel\":\"high\",\"requiresApproval\":true,\"executable\":true,\"warnings\":[],\"entities\":[{\"type\":\"role\",\"id\":6,\"name\":\"财务专员\"},{\"type\":\"permission\",\"id\":32,\"name\":\"薪资记录查看\"}],\"preview\":{\"action\":\"add\",\"roleId\":6,\"roleName\":\"财务专员\",\"permissionId\":32,\"permissionName\":\"薪资记录查看\"},\"steps\":[{\"stepNo\":1,\"title\":\"读取角色当前权限集\",\"method\":\"GET\",\"api\":\"/api/role-permissions/role/6/perm-ids\",\"payloadPreview\":{}},{\"stepNo\":2,\"title\":\"应用权限变更\",\"method\":\"PUT\",\"api\":\"/api/role-permissions/role/6\",\"payloadPreview\":{\"action\":\"add\",\"roleId\":6,\"roleName\":\"财务专员\",\"permissionId\":32,\"permissionName\":\"薪资记录查看\"}}],\"rollbackPlan\":[\"如需恢复，可使用旧权限集重新覆盖。\"]}', '用户主动取消', '2026-05-18 14:48:01', '2026-05-18 15:00:25');
 
 -- ----------------------------
 -- Table structure for ai_chat_message
@@ -110,7 +113,7 @@ CREATE TABLE `ai_chat_message`  (
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `idx_user_id`(`user_id` ASC) USING BTREE,
   INDEX `idx_create_time`(`create_time` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 9 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI聊天记录表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 19 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI聊天记录表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of ai_chat_message
@@ -119,6 +122,16 @@ INSERT INTO `ai_chat_message` VALUES (5, 9, 'user', '最近请假审批规则是
 INSERT INTO `ai_chat_message` VALUES (6, 9, 'assistant', '主人，我来把当前系统里生效的请假审批规则清晰地梳理给你：\n\n**第一步：判断申请人身份**  \n系统会先识别申请人的角色标签（比如 ADMIN、EMPLOYEE、MANAGER 等），再匹配对应规则。\n\n**第二步：按身份 + 天数条件决定审批路径**  \n目前对不同身份的规则如下（已结合你作为 ADMIN 的权限确认）：\n\n- ✅ **如果你（ADMIN）发起请假**：无论请假几天，都只需 **总经理（GENERAL_MANAGER）一级审批** 即可通过；  \n- 🟡 如果是普通员工（EMPLOYEE）：  \n　→ 3天及以内：HR专员（HR_SPECIALIST）初审 → HR经理（HR_MANAGER）终审；  \n　→ 超过3天：同样走这两级，顺序不变；  \n- 🟡 如果是部门经理（MANAGER）或HR经理（HR_MANAGER）：  \n　→ 均需两级审批，第二级为总经理；  \n- 🟡 总经理本人请假：则由HR经理审批即可。\n\n📌 **补充说明**：  \n- 所有规则均基于系统当前配置，无需手动切换，提交时自动触发对应流程；  \n- 当前系统共启用 **6 条请假审批规则**（属于“请假审批规则”这一大类，该类共含 6 条，全部已激活）；  \n- 你作为总经办管理员，拥有全局查看权限，也可以在「系统设置 → 审批管理 → 请假审批规则」中随时核对或导出规则详情。\n\n需要我帮你展开某一条规则的具体配置逻辑，或者演示如何在后台查看/导出这些规则吗？', 'openai-compatible-primary', 'qwen-plus', 1, '2026-03-14 01:09:28');
 INSERT INTO `ai_chat_message` VALUES (7, 9, 'user', '最近请假审批规则是什么？', NULL, NULL, NULL, '2026-03-14 01:09:57');
 INSERT INTO `ai_chat_message` VALUES (8, 9, 'assistant', '主人，我刚刚再次确认了系统当前生效的请假审批规则——它们没有更新变动，和上次一致，但既然你又问了一次，说明可能想更清晰地掌握要点。那我用更聚焦的方式，为你重新梳理一遍：\n\n✅ **核心原则**：审批路径由「申请人身份」+「请假天数」共同决定，系统自动匹配，无需手动选择。\n\n🔍 **针对你（云月，身份标签=ADMIN）的规则**（最简明的一条）：  \n> 无论请1小时、1天，还是连续多日，**只需总经理（GENERAL_MANAGER）审批一次**，流程即结束。  \n→ 这是系统为 ADMIN 角色特别设置的高效路径，毕竟你是总经办管理员，也常需统筹协调呢。\n\n📎 其他常见角色作为参考（方便你日常管理或协助同事时对照）：  \n- 普通员工（EMPLOYEE）：≤3天 → HR专员初审 + HR经理终审；＞3天 → 同样两级，不加额外环节；  \n- 部门经理（MANAGER）：HR经理初审 → 总经理终审；  \n- HR经理本人：直接由总经理审批；  \n- 总经理本人：由HR经理审批。\n\n📊 补充事实（来自系统实时读取）：  \n- 当前共启用 **6 条请假审批规则**，全部归属「请假审批规则」类型；  \n- 所有规则均已发布生效，无草稿或待启用项；  \n- 规则逻辑已嵌入审批引擎，提交即触发，无需人工干预路径。\n\n需要我带你一步步查看这些规则在后台的具体配置界面？或者帮你生成一份可打印的规则速查表？请交给我吧～', 'openai-compatible-primary', 'qwen-plus', 1, '2026-03-14 01:10:06');
+INSERT INTO `ai_chat_message` VALUES (9, 9, 'user', '今天绵阳市的天气', NULL, NULL, NULL, '2026-04-10 19:23:48');
+INSERT INTO `ai_chat_message` VALUES (10, 9, 'assistant', '主人，我刚刚调取了系统实时天气数据——  \n今天（2026年4月10日）四川·绵阳市的天气是：**阴**，气温 **19℃**，西北风，风力 ≤3级，湿度 **76%**。  \n更新时间是今天 19:05:03，数据来自权威气象接口，已同步至系统。\n\n嗯，这也是高性能的判断：这样的天气很适合在办公室窗边泡一杯温茶，处理完手头事务后，稍作放松～  \n需要我帮你查明天的预报，或者提醒你带伞/添衣的小建议吗？', 'openai-compatible-primary', 'qwen-plus', 1, '2026-04-10 19:23:52');
+INSERT INTO `ai_chat_message` VALUES (11, 6, 'user', '今天有谁请假了', NULL, NULL, NULL, '2026-04-10 20:00:22');
+INSERT INTO `ai_chat_message` VALUES (12, 6, 'assistant', '主人，我刚刚查询了系统里的请假数据——但需要说明的是：当前系统中**所有请假记录均未包含具体的请假开始日期或结束日期字段**，因此无法按“今天（2026-04-10）”这个时间点筛选出“今日正在请假”或“今日发起请假”的人员。\n\n不过我可以确认：  \n✅ 系统当前共存有 9 条请假记录；  \n✅ 您本人（陈静）最近有两条已通过的请假：一次事假、一次年假（具体日期需点开记录查看）；  \n❌ 其余记录的申请人姓名、部门、请假起止时间等关键信息，在本次读取中未被系统返回，暂时无法确认。\n\n如果您需要进一步了解某位同事的请假情况，可以告诉我姓名或部门，我来帮您查是否有对应记录；或者，您也可以在“考勤管理 → 请假管理”页面中，使用日期范围筛选功能手动查看——系统支持按“申请日期”或“开始日期”检索哦。\n\n需要我陪您一起操作吗？😊', 'openai-compatible-primary', 'qwen-plus', 1, '2026-04-10 20:00:39');
+INSERT INTO `ai_chat_message` VALUES (13, 9, 'user', '今天绵阳市的天气', NULL, NULL, NULL, '2026-05-18 14:01:30');
+INSERT INTO `ai_chat_message` VALUES (14, 9, 'assistant', '我是亚托莉。虽然这次模型连接没有成功，不过主人先别着急，高性能的我还是会先把能确认的信息告诉你。\n\n抱歉，我暂时找不到「绵阳」的天气信息。\n\n这些内容来自当前系统里的只读数据，所以可以先把它当成可靠依据。\n\n如果你愿意，可以把问题再问得更具体一点。请交给我吧，我会继续认真回答你。', 'openai-compatible-primary', 'qwen-plus', 1, '2026-05-18 14:01:37');
+INSERT INTO `ai_chat_message` VALUES (15, 9, 'user', '今天绵阳市的天气', NULL, NULL, NULL, '2026-05-18 14:04:52');
+INSERT INTO `ai_chat_message` VALUES (16, 9, 'assistant', '主人，我刚刚核对了系统里最新同步的气象数据——  \n**今天（2026年5月18日）四川·绵阳市：阴，29℃，西北风4级，湿度42%。**  \n更新时间是今天 14:03:06，数据真实有效，已通过系统气象接口校验。\n\n嗯，这也是高性能的判断：风力稍强、湿度适中，适合开窗通风，但外出时记得留意防晒和防风哦～  \n需要我帮你查接下来两天的趋势，或者提醒你是否适合安排户外会议？', 'openai-compatible-primary', 'qwen-plus', 1, '2026-05-18 14:04:56');
+INSERT INTO `ai_chat_message` VALUES (17, 9, 'user', '本公司员工总数是多少？', NULL, NULL, NULL, '2026-05-18 14:05:02');
+INSERT INTO `ai_chat_message` VALUES (18, 9, 'assistant', '主人，我刚刚核对了系统里的最新数据：  \n**本公司当前员工总数是 16 人。**  \n\n这个数字是系统实时统计的只读结果，包含所有在职及试用期员工（例如周洋目前在技术部处于试用状态，也已计入），不包含离职、待入职或外包人员。\n\n需要我为你展开看看各部门分布，或者导出一份简明的部门-人数对照表吗？请交给我吧～', 'openai-compatible-primary', 'qwen-plus', 1, '2026-05-18 14:05:06');
 
 -- ----------------------------
 -- Table structure for approval_rule
@@ -140,16 +153,16 @@ CREATE TABLE `approval_rule`  (
   INDEX `idx_approval_rule_type_code`(`type_code` ASC) USING BTREE,
   INDEX `idx_approval_rule_applicant_tag`(`applicant_tag` ASC) USING BTREE,
   CONSTRAINT `fk_approval_rule_type` FOREIGN KEY (`type_code`) REFERENCES `approval_rule_type` (`type_code`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 13 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 13 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of approval_rule
 -- ----------------------------
 INSERT INTO `approval_rule` VALUES (1, 'leave', 'ADMIN', 'any', 0.00, 'GENERAL_MANAGER', NULL, NULL, 0, '2024-01-01 09:00:00', '2026-04-10 10:00:00');
-INSERT INTO `approval_rule` VALUES (2, 'leave', 'FINANCE_SPECIALIST', '<=', 3.00, 'HR_SPECIALIST', 'HR_MANAGER', 'company', 1, '2024-01-01 09:00:00', '2026-04-10 10:00:00');
+INSERT INTO `approval_rule` VALUES (2, 'leave', 'FINANCE_SPECIALIST', '<=', 3.00, 'HR_SPECIALIST', NULL, NULL, 1, '2024-01-01 09:00:00', '2026-04-10 19:11:18');
 INSERT INTO `approval_rule` VALUES (3, 'leave', 'FINANCE_SPECIALIST', '>', 3.00, 'HR_SPECIALIST', 'HR_MANAGER', 'company', 2, '2024-01-01 09:00:00', '2026-04-10 10:00:00');
-INSERT INTO `approval_rule` VALUES (4, 'leave', 'HR_SPECIALIST', 'any', 0.00, 'HR_MANAGER', 'GENERAL_MANAGER', 'company', 3, '2024-01-01 09:00:00', '2026-04-10 10:00:00');
-INSERT INTO `approval_rule` VALUES (5, 'leave', 'EMPLOYEE', '<=', 3.00, 'HR_SPECIALIST', 'HR_MANAGER', 'company', 4, '2024-01-01 09:00:00', '2026-04-10 10:00:00');
+INSERT INTO `approval_rule` VALUES (4, 'leave', 'HR_SPECIALIST', 'any', 0.00, 'HR_MANAGER', NULL, NULL, 3, '2024-01-01 09:00:00', '2026-04-10 19:13:00');
+INSERT INTO `approval_rule` VALUES (5, 'leave', 'EMPLOYEE', '<=', 3.00, 'HR_SPECIALIST', NULL, NULL, 4, '2024-01-01 09:00:00', '2026-04-10 19:11:04');
 INSERT INTO `approval_rule` VALUES (6, 'leave', 'EMPLOYEE', '>', 3.00, 'HR_SPECIALIST', 'HR_MANAGER', 'company', 5, '2024-01-01 09:00:00', '2026-04-10 10:00:00');
 INSERT INTO `approval_rule` VALUES (7, 'leave', 'MANAGER', 'any', 0.00, 'HR_MANAGER', 'GENERAL_MANAGER', 'company', 6, '2024-01-01 09:00:00', '2026-04-10 10:00:00');
 INSERT INTO `approval_rule` VALUES (8, 'leave', 'FINANCE_MANAGER', 'any', 0.00, 'HR_MANAGER', 'GENERAL_MANAGER', 'company', 7, '2024-01-01 09:00:00', '2026-04-10 10:00:00');
@@ -170,7 +183,7 @@ CREATE TABLE `approval_rule_type`  (
   `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`type_code`) USING BTREE
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of approval_rule_type
@@ -196,7 +209,7 @@ CREATE TABLE `attendance`  (
   UNIQUE INDEX `uk_attendance_emp_date`(`emp_id` ASC, `attendance_date` ASC) USING BTREE,
   INDEX `idx_attendance_date_status`(`attendance_date` ASC, `status` ASC) USING BTREE,
   CONSTRAINT `fk_attendance_emp` FOREIGN KEY (`emp_id`) REFERENCES `employee` (`emp_id`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 10 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 10 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of attendance
@@ -226,7 +239,7 @@ CREATE TABLE `department`  (
   UNIQUE INDEX `uk_department_name`(`dept_name` ASC) USING BTREE,
   INDEX `idx_department_parent_id`(`parent_id` ASC) USING BTREE,
   CONSTRAINT `fk_department_parent` FOREIGN KEY (`parent_id`) REFERENCES `department` (`dept_id`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 8 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 8 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of department
@@ -253,7 +266,7 @@ CREATE TABLE `dept_permission_template`  (
   INDEX `idx_dept_permission_template_module_code`(`module_code` ASC) USING BTREE,
   CONSTRAINT `fk_dept_permission_template_dept` FOREIGN KEY (`dept_id`) REFERENCES `department` (`dept_id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
   CONSTRAINT `fk_dept_permission_template_module` FOREIGN KEY (`module_code`) REFERENCES `module_scope_rule` (`module_code`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 20 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 20 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of dept_permission_template
@@ -310,7 +323,7 @@ CREATE TABLE `employee`  (
   CONSTRAINT `fk_employee_dept` FOREIGN KEY (`dept_id`) REFERENCES `department` (`dept_id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
   CONSTRAINT `fk_employee_identity_tag` FOREIGN KEY (`identity_tag_code`) REFERENCES `identity_tag` (`tag_code`) ON DELETE RESTRICT ON UPDATE RESTRICT,
   CONSTRAINT `fk_employee_position` FOREIGN KEY (`position_id`) REFERENCES `job_position` (`position_id`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 17 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 17 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of employee
@@ -342,7 +355,7 @@ CREATE TABLE `identity_tag`  (
   `tag_desc` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL,
   `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`tag_code`) USING BTREE
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of identity_tag
@@ -369,7 +382,7 @@ CREATE TABLE `job_position`  (
   PRIMARY KEY (`position_id`) USING BTREE,
   INDEX `idx_job_position_dept_id`(`dept_id` ASC) USING BTREE,
   CONSTRAINT `fk_job_position_dept` FOREIGN KEY (`dept_id`) REFERENCES `department` (`dept_id`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 16 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 16 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of job_position
@@ -418,18 +431,20 @@ CREATE TABLE `leave_request`  (
   INDEX `idx_leave_request_approver_id`(`approver_id` ASC) USING BTREE,
   CONSTRAINT `fk_leave_request_approver` FOREIGN KEY (`approver_id`) REFERENCES `sys_user` (`user_id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
   CONSTRAINT `fk_leave_request_emp` FOREIGN KEY (`emp_id`) REFERENCES `employee` (`emp_id`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 8 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 10 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of leave_request
 -- ----------------------------
 INSERT INTO `leave_request` VALUES (1, 5, '年假', '2024-01-15', '2024-01-17', 3.00, '回老家探亲', '已通过', 2, NULL, NULL, NULL, NULL, '2024-01-10 09:30:00', '2024-01-11 14:00:00', '资料齐全，同意请假');
-INSERT INTO `leave_request` VALUES (2, 3, '病假', '2024-01-20', '2024-01-21', 2.00, '感冒发烧需要休息', '待审批', NULL, 'HR_MANAGER', 'company', 'GENERAL_MANAGER', 'company', '2024-01-18 14:20:00', NULL, NULL);
+INSERT INTO `leave_request` VALUES (2, 3, '病假', '2024-01-20', '2024-01-21', 2.00, '感冒发烧需要休息', '待审批', NULL, 'HR_MANAGER', 'company', NULL, NULL, '2024-01-18 14:20:00', NULL, NULL);
 INSERT INTO `leave_request` VALUES (3, 8, '事假', '2024-01-22', '2024-01-22', 1.00, '处理个人事务', '已通过', 3, NULL, NULL, NULL, NULL, '2024-01-19 10:00:00', '2024-01-19 16:10:00', '先由HR继续处理');
 INSERT INTO `leave_request` VALUES (4, 10, '婚假', '2024-02-01', '2024-02-10', 10.00, '办理婚礼', '待审批', NULL, 'HR_SPECIALIST', 'company', 'HR_MANAGER', 'company', '2024-01-20 16:00:00', NULL, NULL);
 INSERT INTO `leave_request` VALUES (5, 7, '年假', '2024-01-25', '2024-01-26', 2.00, '个人休假', '已拒绝', 3, NULL, NULL, NULL, NULL, '2024-01-15 11:30:00', '2024-01-16 09:30:00', '项目关键期暂不批准');
 INSERT INTO `leave_request` VALUES (6, 1, '年假', '2024-03-01', '2024-03-03', 3.00, '总经理请假测试', '待审批', NULL, 'HR_MANAGER', 'company', NULL, NULL, '2024-02-28 10:00:00', NULL, NULL);
 INSERT INTO `leave_request` VALUES (7, 15, '事假', '2024-03-05', '2024-03-05', 1.00, 'HR经理请假测试', '待审批', NULL, 'GENERAL_MANAGER', 'company', NULL, NULL, '2024-03-04 14:00:00', NULL, NULL);
+INSERT INTO `leave_request` VALUES (8, 9, '事假', '2026-04-10', '2026-04-11', 2.00, '答辩', '已取消', NULL, NULL, NULL, NULL, NULL, '2026-04-10 19:16:53', NULL, NULL);
+INSERT INTO `leave_request` VALUES (9, 5, '事假', '2026-04-10', '2026-04-11', 2.00, '答辩', '已通过', 2, NULL, NULL, NULL, NULL, '2026-04-10 19:18:22', '2026-04-10 19:18:53', NULL);
 
 -- ----------------------------
 -- Table structure for module_scope_detail
@@ -447,7 +462,7 @@ CREATE TABLE `module_scope_detail`  (
   INDEX `idx_module_scope_detail_tag_code`(`tag_code` ASC) USING BTREE,
   CONSTRAINT `fk_module_scope_detail_rule` FOREIGN KEY (`module_code`) REFERENCES `module_scope_rule` (`module_code`) ON DELETE RESTRICT ON UPDATE RESTRICT,
   CONSTRAINT `fk_module_scope_detail_tag` FOREIGN KEY (`tag_code`) REFERENCES `identity_tag` (`tag_code`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 45 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 45 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of module_scope_detail
@@ -508,7 +523,7 @@ CREATE TABLE `module_scope_rule`  (
   `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`module_code`) USING BTREE
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of module_scope_rule
@@ -537,7 +552,7 @@ CREATE TABLE `operation_log`  (
   INDEX `idx_operation_log_user_id`(`user_id` ASC) USING BTREE,
   INDEX `idx_operation_log_time`(`operation_time` ASC) USING BTREE,
   CONSTRAINT `fk_operation_log_user` FOREIGN KEY (`user_id`) REFERENCES `sys_user` (`user_id`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 4 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 4 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of operation_log
@@ -564,7 +579,7 @@ CREATE TABLE `permission`  (
   UNIQUE INDEX `uk_permission_code`(`perm_code` ASC) USING BTREE,
   INDEX `idx_permission_parent_id`(`parent_id` ASC) USING BTREE,
   CONSTRAINT `fk_permission_parent` FOREIGN KEY (`parent_id`) REFERENCES `permission` (`perm_id`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 65 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 65 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of permission
@@ -645,7 +660,7 @@ CREATE TABLE `role`  (
   PRIMARY KEY (`role_id`) USING BTREE,
   UNIQUE INDEX `uk_role_code`(`role_code` ASC) USING BTREE,
   UNIQUE INDEX `uk_role_name`(`role_name` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 9 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 9 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of role
@@ -672,7 +687,7 @@ CREATE TABLE `role_permission`  (
   INDEX `idx_role_permission_perm_id`(`perm_id` ASC) USING BTREE,
   CONSTRAINT `fk_role_permission_perm` FOREIGN KEY (`perm_id`) REFERENCES `permission` (`perm_id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
   CONSTRAINT `fk_role_permission_role` FOREIGN KEY (`role_id`) REFERENCES `role` (`role_id`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 281 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 281 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of role_permission
@@ -889,7 +904,7 @@ CREATE TABLE `salary_config`  (
   `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`config_id`) USING BTREE,
   UNIQUE INDEX `uk_salary_config_key_effective`(`config_key` ASC, `effective_date` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 5 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 5 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of salary_config
@@ -932,7 +947,7 @@ CREATE TABLE `salary_record`  (
   INDEX `idx_salary_record_month`(`salary_month` ASC) USING BTREE,
   INDEX `idx_salary_record_status`(`status` ASC) USING BTREE,
   CONSTRAINT `fk_salary_record_emp` FOREIGN KEY (`emp_id`) REFERENCES `employee` (`emp_id`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 6 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 6 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of salary_record
@@ -963,19 +978,19 @@ CREATE TABLE `sys_user`  (
   INDEX `idx_sys_user_role_id`(`role_id` ASC) USING BTREE,
   CONSTRAINT `fk_sys_user_emp` FOREIGN KEY (`emp_id`) REFERENCES `employee` (`emp_id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
   CONSTRAINT `fk_sys_user_role` FOREIGN KEY (`role_id`) REFERENCES `role` (`role_id`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 10 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 10 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of sys_user
 -- ----------------------------
 INSERT INTO `sys_user` VALUES (1, 1, 'gm', '123456', 8, '启用', NULL, '2024-01-01 09:00:00', '2026-03-14 00:21:56');
-INSERT INTO `sys_user` VALUES (2, 2, 'hr_lina', '123456', 2, '启用', NULL, '2024-01-01 09:00:00', '2024-01-01 09:00:00');
+INSERT INTO `sys_user` VALUES (2, 2, 'hr_lina', '123456', 2, '启用', '2026-04-10 19:18:40', '2024-01-01 09:00:00', '2026-04-10 19:18:40');
 INSERT INTO `sys_user` VALUES (3, 6, 'manager_zhao', '123456', 3, '启用', NULL, '2024-01-01 09:00:00', '2024-01-01 09:00:00');
 INSERT INTO `sys_user` VALUES (4, 8, 'emp_zhou', '123456', 4, '启用', NULL, '2024-01-01 09:00:00', '2024-01-01 09:00:00');
 INSERT INTO `sys_user` VALUES (5, 4, 'finance_liu', '123456', 5, '启用', NULL, '2024-01-01 09:00:00', '2024-01-01 09:00:00');
-INSERT INTO `sys_user` VALUES (6, 5, 'finance_chen', '123456', 6, '启用', NULL, '2024-01-01 09:00:00', '2024-01-01 09:00:00');
+INSERT INTO `sys_user` VALUES (6, 5, 'finance_chen', '123456', 6, '启用', '2026-04-10 19:59:56', '2024-01-01 09:00:00', '2026-04-10 19:59:56');
 INSERT INTO `sys_user` VALUES (7, 15, 'hr_manager', '123456', 7, '启用', NULL, '2024-01-01 09:00:00', '2024-01-01 09:00:00');
-INSERT INTO `sys_user` VALUES (8, 9, 'emp_wu', '123456', 4, '启用', NULL, '2024-01-01 09:00:00', '2024-01-01 09:00:00');
-INSERT INTO `sys_user` VALUES (9, 16, 'yunyue', 'yunyue', 1, '启用', '2026-03-14 01:00:41', '2026-03-14 00:22:55', '2026-03-14 01:00:41');
+INSERT INTO `sys_user` VALUES (8, 9, 'emp_wu', '123456', 4, '启用', '2026-04-10 19:16:30', '2024-01-01 09:00:00', '2026-04-10 19:16:30');
+INSERT INTO `sys_user` VALUES (9, 16, 'yunyue', 'yunyue', 1, '启用', '2026-05-18 15:00:08', '2026-03-14 00:22:55', '2026-05-18 15:00:08');
 
 SET FOREIGN_KEY_CHECKS = 1;
