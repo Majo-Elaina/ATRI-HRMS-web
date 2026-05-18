@@ -11,8 +11,15 @@
 ## 📖 项目简介
 
 HRMS-Web 是一套面向中小企业的人事管理系统前端，基于 Vue 3 生态构建。系统覆盖组织管理、考勤、薪酬、OA 审批、权限配置和数据报表等核心人事场景，并集成了具有独立人格设定的 AI 智能助手「亚托莉」，支持自然语言查询公司数据、天气查询和 AI 代理执行操作。
+<div align="center">
+  <img width="900" height="400" alt="ATRI-logo-1" src="https://github.com/user-attachments/assets/3b35e062-d469-4f79-8b5b-94711bbbc10f" />
+</div>
+
 
 ## ✨ 核心功能
+<div align="center">
+  <img width="2560" height="1347" alt="image" src="https://github.com/user-attachments/assets/8bffed08-93e4-4784-ad36-5aa64cb366e3" />
+</div>
 
 ### 🏢 组织与人事管理
 
